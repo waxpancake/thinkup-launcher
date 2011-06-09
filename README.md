@@ -9,7 +9,10 @@ and Facebook, at http://thinkupapp.com/
 
 ## Installation
 
-Requires PHP 5.  Drop in a directory on your webserver, and edit config.php to point to your directory name.  The rest should just work.
+Requires PHP 5.  
+
+Drop in a directory on your webserver, and copy config.inc.php.sample to config.inc.php.
+Edit config.inc.php to point to the full directory name.  The rest should just work.
 
 ## What It Does
 
