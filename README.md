@@ -44,5 +44,5 @@ http://www.zurb.com/playground/reveal-modal-plugin
 
 ## Comments?
 
-All push requests and feedback appreciated.  
+All pull requests and feedback appreciated.  
 
