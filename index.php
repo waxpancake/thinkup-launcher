@@ -178,7 +178,7 @@ if (isset($_POST['aws_id']) && isset($_POST['aws_key'])) {
                     $("#server_link").append(server_link);
                     $("#thinkup_link").append(thinkup_link);
                     $('#serverinfo').slideDown();                
-                }, 12000);
+                }, 16000);
             } else {
                 percentProgress += 2;
                 $('#progress_bar .ui-progress').animateProgress(percentProgress);
