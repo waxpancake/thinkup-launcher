@@ -125,7 +125,7 @@ if (isset($_POST['aws_id']) && isset($_POST['aws_key'])) {
 
     <div id="footer">
         Learn more about <a href="http://thinkupapp.com/">ThinkUp</a> |
-        Help improve <a href=https://github.com/waxpancake/thinkup-launcher">ThinkUp Launcher on Github</a>
+        Help improve <a href="https://github.com/waxpancake/thinkup-launcher">ThinkUp Launcher on Github</a>
     </div>
 
 
