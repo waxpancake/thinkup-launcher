@@ -2,6 +2,9 @@
 
 A one-click web page for simply booting your own private EC2 instance running ThinkUp.
 
+Learn more about ThinkUp, an open-source web app for tracking and archiving Twitter
+and Facebook, at http://thinkupapp.com/
+
 **THIS IS ALPHA SOFTWARE.**
 
 ## Installation

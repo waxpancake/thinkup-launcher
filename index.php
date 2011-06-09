@@ -48,7 +48,7 @@ if (isset($_POST['aws_id']) && isset($_POST['aws_key'])) {
     </div>
     
     <div id="title">ThinkUp Launcher</div>
-    <div id="subhead">Create Your Own Private ThinkUp Server on Amazon EC2</div>
+    <div id="subhead">Create Your Own Private <a href="http://thinkupapp.com/">ThinkUp</a> Server on Amazon EC2</div>
     <div id="description">
         Free for the first year for new Amazon Web Services customers; everyone else pays about 
         $14.50 per month. <a href="http://aws.amazon.com/ec2/pricing/">Learn more</a>.
@@ -122,7 +122,15 @@ if (isset($_POST['aws_id']) && isset($_POST['aws_key'])) {
             </div>
         </div>        
     <? } ?>
+
+    <div id="footer">
+        Learn more about <a href="http://thinkupapp.com/">ThinkUp</a> |
+        Help improve <a href=https://github.com/waxpancake/thinkup-launcher">ThinkUp Launcher on Github</a>
+    </div>
+
+
 </div>
+
 
 <script type="text/javascript">
     $(function() {
