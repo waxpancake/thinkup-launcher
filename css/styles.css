@@ -1,0 +1,173 @@
+body {
+    background-color: #cfcfcf;
+    color: #484848;
+    font-size: 18px;
+    margin: 0;
+}
+
+body, input {
+    font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+}
+
+a, a:visited {
+    color: #666;
+    font-weight: bold;
+}
+
+a:hover {
+    color: #000;
+}
+
+#main {
+    width: 800px;
+    margin-top: 40px;
+    margin-left: auto;
+    margin-right: auto;
+    padding: 20px;
+}
+
+#title {
+    font-size: 100px;
+    font-weight: bold;
+    letter-spacing: -6px;
+    color: #fff;
+    text-shadow: 0 1px 0 #ccc, 
+        0 2px 0 #c9c9c9,
+        0 3px 0 #bbb,
+        0 4px 0 #b9b9b9,
+        0 5px 0 #aaa,
+        0 6px 1px rgba(0,0,0,.1),
+        0 0 5px rgba(0,0,0,.1),
+        0 1px 3px rgba(0,0,0,.3),
+        0 3px 5px rgba(0,0,0,.2),
+        0 5px 10px rgba(0,0,0,.25),
+        0 10px 10px rgba(0,0,0,.2),
+        0 20px 20px rgba(0,0,0,.15);
+}
+
+h3 {
+    margin-bottom: 10px;
+}
+
+#subhead {
+    color: #484848;
+    width: 600px;
+    font-weight: bold;
+    font-size: 36px;
+    line-height: 34px;
+    letter-spacing: -1px;
+    margin-bottom: 20px;
+}
+
+form {
+    width: 600px;
+}
+
+#dialog-modal {
+    font-size: 16px;
+    font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+    color: #666;
+}
+
+#modal-message {
+    font-size: 24px;
+    line-height: 32px;
+    margin: 0 0 18px;
+    color: #777;
+}
+
+#container {
+    position: absolute;
+    top: 0px;
+    left: 50%;
+    margin-left: -320px;
+    font-size: 14px;
+    width: 460px;
+    padding: 2em;  
+    background: #DCDDDF;
+    -webkit-box-shadow: rgba(0, 0, 0, 0.0976562) 1px 0px 1px,
+              rgba(0, 0, 0, 0.046875) 1px -1px 0px,
+              rgba(0, 0, 0, 0.0976562) 0px 1px 0px,
+              rgba(0, 0, 0, 0.0976562) -1px 0px 1px,
+              rgba(0, 0, 0, 0.046875) -1px -1px 0px,
+              rgba(0, 0, 0, 0.148438) 0px 3px 3px;
+    -moz-box-shadow: rgba(0, 0, 0, 0.0976562) 1px 0px 1px,
+           rgba(0, 0, 0, 0.046875) 1px -1px 0px,
+           rgba(0, 0, 0, 0.0976562) 0px 1px 0px,
+           rgba(0, 0, 0, 0.0976562) -1px 0px 1px,
+           rgba(0, 0, 0, 0.046875) -1px -1px 0px,
+           rgba(0, 0, 0, 0.148438) 0px 3px 3px;
+}
+
+.ui-container {
+  font-size: 12px;
+  font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+}
+
+#description {
+    color: #484848;
+    width: 600px;
+    font-size: 24px;
+    letter-spacing: -1px;
+}
+
+#status {
+  font-size: 24px;
+  color: rgba(0,0,0,0.6);
+  text-shadow: rgba(255,255,255, 0.9) 0 1px 0px;
+  font-weight: bold;
+  margin-bottom: 10px;
+}
+
+#instructions {
+    font-size: 14px;
+    color: #484848;
+    width: 500px;
+    margin-bottom: 20px;
+}
+
+label {
+    display: block;
+    text-transform: uppercase;
+    font-weight: bold;
+    font-size: 18px;
+    color: #666;
+}
+
+input.text {
+    box-shadow: 5px 5px 5px #bbb;
+    width: 300px;
+    height: 40px;
+    border: 0;
+    padding: 5px;
+    font-size: 18px;
+    color: #666;
+    margin-top: 5px;
+    margin-bottom: 14px;
+    margin-right: 10px;
+}
+
+.error {
+    font-size: 14px;
+    color: red;
+}
+
+.button, .button:visited {
+	background: #222 url(../img/overlay.png) repeat-x; 
+	display: inline-block; 
+	padding: 5px 10px 6px; 
+	color: #fff; 
+	text-decoration: none;
+	-moz-border-radius: 5px; 
+	-webkit-border-radius: 5px;
+	-moz-box-shadow: 0 1px 3px rgba(0,0,0,0.5);
+	-webkit-box-shadow: 0 1px 3px rgba(0,0,0,0.5);
+	text-shadow: 0 -1px 1px rgba(0,0,0,0.25);
+	border-bottom: 1px solid rgba(0,0,0,0.25);
+	position: relative;
+	cursor: pointer;
+}
+ 
+.button:hover							{ background-color: #111; color: #fff; }
+.button:active							{ top: 1px; }
+.large.button, .large.button:visited 	{ font-size: 14px; padding: 8px 14px 9px; font-weight: bold; line-height: 1; text-shadow: 0 -1px 1px rgba(0,0,0,0.25); }
