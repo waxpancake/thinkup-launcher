@@ -31,7 +31,7 @@ if (isset($_POST['aws_id']) && isset($_POST['aws_key'])) {
         ?>
         <script>
             $(document).ready(function() {
-        		$("#modal-message").html("Your AWS Access Key ID and/or Secret Key aren't valid. Please check them and retry.");
+        		$("#modal-message").html("Your AWS Access Key ID and/or Secret Key don't appear to be valid. Please verify that you have <a href='http://aws.amazon.com/ec2' target='_blank'>access to EC2</a> &mdash; not just Amazon Web Services &mdash; and retry.");
                 $('#myModal').reveal();
             });
         </script>
@@ -50,16 +50,15 @@ if (isset($_POST['aws_id']) && isset($_POST['aws_key'])) {
     <div id="title">ThinkUp Launcher</div>
     <div id="subhead">Create Your Own Private <a href="http://thinkupapp.com/">ThinkUp</a> Server on Amazon EC2</div>
     <div id="description">
-        Free for the first year for new Amazon Web Services customers; everyone else pays about 
+        Free for the first year for new Amazon EC2 users; everyone else pays about 
         $14.50 per month. <a href="http://aws.amazon.com/ec2/pricing/">Learn more</a>.
     </div>
     
     <h3>To get started, enter your Amazon Web Services keys.</h3>
 
     <div id="instructions">
-        No Amazon Web Services account? <a href="https://aws-portal.amazon.com/gp/aws/developer/registration/index.html">Create one now</a>.<br /> 
-        If you have an account, your AWS keys are 
-        <a href="https://aws-portal.amazon.com/gp/aws/developer/account/index.html?action=access-key#access_credentials">right here</a>.
+        No Amazon Web Services account? <a href="http://aws.amazon.com/ec2">Sign up for EC2 now</a>.<br /> 
+        If you already have an EC2 account, here are your <a href="https://aws-portal.amazon.com/gp/aws/developer/account/index.html?action=access-key#access_credentials" target="_blank">your Access Keys</a>.
     </div>
         
     <form action="" method="post">
