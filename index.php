@@ -89,10 +89,8 @@ if (isset($_POST['aws_id']) && isset($_POST['aws_key'])) {
             <div id="serverinfo" style="display: none">
                 <p><strong>Your ThinkUp server is now running!</strong></p>
                 
-                <p>You can finish your ThinkUp installation here:</p>
+                <p>Finish your ThinkUp installation here:</p>
                 <p><span id="thinkup_link"></span></p>
-                
-                <p><strong>Your New Server:</strong> <span id="server_link"></span></p>
                 
                 <p>
                 <strong>Your Database Info</strong> (needed to complete ThinkUp installation):<br />
