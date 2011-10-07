@@ -12,11 +12,10 @@
 
 <?php
 include('config.inc.php');
-header("Content-type: text/html; charset=utf-8");
 require('aws-sdk/sdk.class.php');
 require('base.php');
 
-$ami = 'ami-44d42d2d'; // us-west
+$ami = 'ami-75a9651c';
 
 if (isset($_POST['aws_id']) && isset($_POST['aws_key'])) {
     $ec2 = new AmazonEC2($_POST['aws_id'], $_POST['aws_key']);

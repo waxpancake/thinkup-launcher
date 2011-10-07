@@ -65,7 +65,7 @@ function createKeyPair($ec2) {
 
 
 
-function createInstance($ec2, $ami, $userdata_add) {
+function createInstance($ec2, $ami, $userdata_add = '') {
     $password = randomPassword(12);
     $userdata = getUserdata($password);
     if (isset($userdata_add)) {
@@ -114,8 +114,8 @@ function getUserdata($password) {
 #!/bin/bash -ex
 exec > >(tee /var/log/user-data.log|logger -t user-data -s 2>/dev/console) 2>&1
 
-wget https://github.com/downloads/ginatrapani/ThinkUp/thinkup_0.14.zip --no-check-certificate
-sudo unzip -d /var/www/ thinkup_0.14.zip
+wget https://github.com/downloads/ginatrapani/ThinkUp/thinkup_0.15.zip --no-check-certificate
+sudo unzip -d /var/www/ thinkup_0.15.zip
 
 # config thinkup installer
 sudo ln -s /usr/sbin/sendmail /usr/bin/sendmail
