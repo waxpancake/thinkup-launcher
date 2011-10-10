@@ -56,7 +56,7 @@
 	*/
 
 	// Instantiate the AmazonEC2 class
-	$ec2 = new AmazonEC2('16WDZGW5RD6JDS501ZG2', 'oOjCWHS3qWCgRfPqCmNGmS2w3aacUrnbkM+TADQb');
+	$ec2 = new AmazonEC2();
 
 	// Get the response from a call to the DescribeImages operation.
 	$response = $ec2->describe_images();

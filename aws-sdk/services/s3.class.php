@@ -49,7 +49,7 @@ class S3_Exception extends Exception {}
  *
  * Visit <http://aws.amazon.com/s3/> for more information.
  *
- * @version 2011.04.22
+ * @version 2011.05.18
  * @license See the included NOTICE.md file for more information.
  * @copyright See the included NOTICE.md file for more information.
  * @link http://aws.amazon.com/s3/ Amazon Simple Storage Service
@@ -245,13 +245,16 @@ class AmazonS3 extends CFRuntime
 	// CONSTRUCTOR
 
 	/**
-	 * Constructs a new instance of this class.
+	 * Constructs a new instance of <AmazonS3>. If the <code>AWS_DEFAULT_CACHE_CONFIG</code> configuration
+	 * option is set, requests will be authenticated using a session token. Otherwise, requests will use
+	 * the older authentication method.
 	 *
-	 * @param string $key (Optional) Amazon API Key. If blank, the `AWS_KEY` constant is used.
-	 * @param string $secret_key (Optional) Amazon API Secret Key. If blank, the `AWS_SECRET_KEY` constant is used.
+	 * @param string $key (Optional) Your AWS key, or a session key. If blank, it will look for the <code>AWS_KEY</code> constant.
+	 * @param string $secret_key (Optional) Your AWS secret key, or a session secret key. If blank, it will look for the <code>AWS_SECRET_KEY</code> constant.
+	 * @param string $token (optional) An AWS session token. If blank, a request will be made to the AWS Secure Token Service to fetch a set of session credentials.
 	 * @return boolean A value of <code>false</code> if no valid values are set, otherwise <code>true</code>.
 	 */
-	public function __construct($key = null, $secret_key = null)
+	public function __construct($key = null, $secret_key = null, $token = null)
 	{
 		$this->vhost = null;
 		$this->api_version = '2006-03-01';
@@ -279,7 +282,12 @@ class AmazonS3 extends CFRuntime
 			// @codeCoverageIgnoreEnd
 		}
 
-		return parent::__construct($key, $secret_key);
+		if (defined('AWS_DEFAULT_CACHE_CONFIG') && AWS_DEFAULT_CACHE_CONFIG)
+		{
+			return parent::session_based_auth($key, $secret_key, $token);
+		}
+
+		return parent::__construct($key, $secret_key, $token);
 	}
 
 
@@ -416,6 +424,12 @@ class AmazonS3 extends CFRuntime
 		);
 
 		/*%******************************************************************************************%*/
+
+		// Do we have an authentication token?
+		if ($this->auth_token)
+		{
+			$headers['X-Amz-Security-Token'] = $this->auth_token;
+		}
 
 		// Handle specific resources
 		if (isset($opt['resource']))
@@ -2370,6 +2384,7 @@ class AmazonS3 extends CFRuntime
 	 * 	<li><code>method</code> - <code>string</code> - Optional - The HTTP method to use for the request. Defaults to a value of <code>GET</code>.</li>
 	 * 	<li><code>response</code> - <code>array</code> - Optional - Allows adjustments to specific response headers. Pass an associative array where each key is one of the following: <code>cache-control</code>, <code>content-disposition</code>, <code>content-encoding</code>, <code>content-language</code>, <code>content-type</code>, <code>expires</code>. The <code>expires</code> value should use <php:gmdate()> and be formatted with the <code>DATE_RFC2822</code> constant.</li>
 	 * 	<li><code>torrent</code> - <code>boolean</code> - Optional - A value of <code>true</code> will return a URL to a torrent of the Amazon S3 object. A value of <code>false</code> will return a non-torrent URL. Defaults to <code>false</code>.</li>
+	 * 	<li><code>versionId</code> - <code>string</code> - Optional - The version of the object. Version IDs are returned in the <code>x-amz-version-id</code> header of any previous object-related request.</li>
 	 * 	<li><code>returnCurlHandle</code> - <code>boolean</code> - Optional - A private toggle specifying that the cURL handle be returned rather than actually completing the request. This toggle is useful for manually managed batch requests.</li></ul>
 	 * @return string The file URL, with authentication and/or torrent parameters if requested.
 	 * @link http://docs.amazonwebservices.com/AmazonS3/latest/dev/S3_QSAuth.html Using Query String Authentication
@@ -3073,6 +3088,90 @@ class AmazonS3 extends CFRuntime
 	}
 
 	/**
+	 * Since Amazon S3's standard <copy_object()> operation only supports copying objects that are smaller than
+	 * 5 GB, the ability to copy large objects (greater than 5 GB) requires the use of "Multipart Copy".
+	 *
+	 * Copying large objects requires the developer to initiate a new multipart "upload", copy pieces of the
+	 * large object (specifying a range of bytes up to 5 GB from the large source file), then complete the
+	 * multipart "upload".
+	 *
+	 * NOTE: <strong>This is a synchronous operation</strong>, not an <em>asynchronous</em> operation, which means
+	 * that Amazon S3 will not return a response for this operation until the copy has completed across the Amazon
+	 * S3 server fleet. Copying objects within a single region will complete more quickly than copying objects
+	 * <em>across</em> regions. The synchronous nature of this operation is different from other services where
+	 * responses are typically returned immediately, even if the operation itself has not yet been completed on
+	 * the server-side.
+	 *
+	 * @param array $source (Required) The bucket and file name to copy from. The following keys must be set: <ul>
+	 * 	<li><code>bucket</code> - <code>string</code> - Required - Specifies the name of the bucket containing the source object.</li>
+	 * 	<li><code>filename</code> - <code>string</code> - Required - Specifies the file name of the source object to copy.</li></ul>
+	 * @param array $dest (Required) The bucket and file name to copy to. The following keys must be set: <ul>
+	 * 	<li><code>bucket</code> - <code>string</code> - Required - Specifies the name of the bucket to copy the object to.</li>
+	 * 	<li><code>filename</code> - <code>string</code> - Required - Specifies the file name to copy the object to.</li></ul>
+	 * @param string $upload_id (Required) The upload ID identifying the multipart upload whose parts are being listed. The upload ID is retrieved from a call to <initiate_multipart_upload()>.
+	 * @param integer $part_number (Required) A part number uniquely identifies a part and defines its position within the destination object. When you complete a multipart upload, a complete object is created by concatenating parts in ascending order based on part number. If you copy a new part using the same part number as a previously copied/uploaded part, the previously written part is overwritten.
+	 * @param array $opt (Optional) An associative array of parameters that can have the following keys: <ul>
+	 * 	<li><code>ifMatch</code> - <code>string</code> - Optional - The ETag header from a previous request. Copies the object if its entity tag (ETag) matches the specified tag; otherwise, the request returns a <code>412</code> HTTP status code error (precondition failed). Used in conjunction with <code>ifUnmodifiedSince</code>.</li>
+	 * 	<li><code>ifUnmodifiedSince</code> - <code>string</code> - Optional - The LastModified header from a previous request. Copies the object if it hasn't been modified since the specified time; otherwise, the request returns a <code>412</code> HTTP status code error (precondition failed). Used in conjunction with <code>ifMatch</code>.</li>
+	 * 	<li><code>ifNoneMatch</code> - <code>string</code> - Optional - The ETag header from a previous request. Copies the object if its entity tag (ETag) is different than the specified ETag; otherwise, the request returns a <code>412</code> HTTP status code error (failed condition). Used in conjunction with <code>ifModifiedSince</code>.</li>
+	 * 	<li><code>ifModifiedSince</code> - <code>string</code> - Optional - The LastModified header from a previous request. Copies the object if it has been modified since the specified time; otherwise, the request returns a <code>412</code> HTTP status code error (failed condition). Used in conjunction with <code>ifNoneMatch</code>.</li>
+	 * 	<li><code>range</code> - <code>string</code> - Optional - The range of bytes to copy from the object. Specify this parameter when copying partial bits. The specified range must be notated with a hyphen (e.g., 0-10485759). Defaults to the byte range of the complete Amazon S3 object.</li>
+	 * 	<li><code>versionId</code> - <code>string</code> - Optional - The version of the object to copy. Version IDs are returned in the <code>x-amz-version-id</code> header of any previous object-related request.</li>
+	 * 	<li><code>curlopts</code> - <code>array</code> - Optional - A set of values to pass directly into <code>curl_setopt()</code>, where the key is a pre-defined <code>CURLOPT_*</code> constant.</li>
+	 * 	<li><code>returnCurlHandle</code> - <code>boolean</code> - Optional - A private toggle specifying that the cURL handle be returned rather than actually completing the request. This toggle is useful for manually managed batch requests.</li></ul>
+	 * @return CFResponse A <CFResponse> object containing a parsed HTTP response.
+	 */
+	public function copy_part($source, $dest, $upload_id, $part_number, $opt = null)
+	{
+		if (!$opt) $opt = array();
+
+		// Add this to our request
+		$opt['verb'] = 'PUT';
+		$opt['resource'] = $dest['filename'];
+		$opt['uploadId'] = $upload_id;
+		$opt['partNumber'] = $part_number;
+
+		// Handle copy source
+		if (isset($source['bucket']) && isset($source['filename']))
+		{
+			$opt['headers']['x-amz-copy-source'] = '/' . $source['bucket'] . '/' . rawurlencode($source['filename'])
+				. (isset($opt['versionId']) ? ('?' . 'versionId=' . rawurlencode($opt['versionId'])) : ''); // Append the versionId to copy, if available
+			unset($opt['versionId']);
+		}
+
+		// Handle conditional-copy parameters
+		if (isset($opt['ifMatch']))
+		{
+			$opt['headers']['x-amz-copy-source-if-match'] = $opt['ifMatch'];
+			unset($opt['ifMatch']);
+		}
+		if (isset($opt['ifNoneMatch']))
+		{
+			$opt['headers']['x-amz-copy-source-if-none-match'] = $opt['ifNoneMatch'];
+			unset($opt['ifNoneMatch']);
+		}
+		if (isset($opt['ifUnmodifiedSince']))
+		{
+			$opt['headers']['x-amz-copy-source-if-unmodified-since'] = $opt['ifUnmodifiedSince'];
+			unset($opt['ifUnmodifiedSince']);
+		}
+		if (isset($opt['ifModifiedSince']))
+		{
+			$opt['headers']['x-amz-copy-source-if-modified-since'] = $opt['ifModifiedSince'];
+			unset($opt['ifModifiedSince']);
+		}
+
+		// Partial content range
+		if (isset($opt['range']))
+		{
+			$opt['headers']['x-amz-copy-source-range'] = 'bytes=' . $opt['range'];
+		}
+
+		// Authenticate to S3
+		return $this->authenticate($dest['bucket'], $opt);
+	}
+
+	/**
 	 * Creates an Amazon S3 object using the multipart upload APIs. It is analogous to <create_object()>.
 	 *
 	 * While each individual part of a multipart upload can hold up to 5 GB of data, this method limits the
@@ -3083,6 +3182,11 @@ class AmazonS3 extends CFRuntime
 	 * Amazon S3 charges for storage as well as requests to the service. Smaller part sizes (and more
 	 * requests) allow for faster failures and better upload reliability. Larger part sizes (and fewer
 	 * requests) costs slightly less but has lower upload reliability.
+	 *
+	 * In certain cases with large objects, it's possible for this method to attempt to open more file system
+	 * connections than allowed by the OS. In this case, either
+	 * <a href="https://forums.aws.amazon.com/thread.jspa?threadID=70216">increase the number of connections
+	 * allowed</a> or increase the value of the <code>partSize</code> parameter to use a larger part size.
 	 *
 	 * @param string $bucket (Required) The name of the bucket to use.
 	 * @param string $filename (Required) The file name for the object.
@@ -3160,7 +3264,7 @@ class AmazonS3 extends CFRuntime
 
 		if ($upload_position === false || !isset($upload_filesize) || $upload_filesize === false || $upload_filesize < 0)
 		{
-		throw new S3_Exception('The size of `fileUpload` cannot be determined in ' . __FUNCTION__ . '().');
+			throw new S3_Exception('The size of `fileUpload` cannot be determined in ' . __FUNCTION__ . '().');
 		}
 
 		// Handle part size

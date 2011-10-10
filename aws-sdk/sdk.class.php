@@ -94,6 +94,29 @@ function __aws_sdk_ua_callback()
 		}
 	}
 
+	foreach (array('memory_limit', 'date.timezone', 'open_basedir', 'safe_mode', 'zend.enable_gc') as $cfg)
+	{
+		$cfg_value = get_cfg_var($cfg);
+
+		if (in_array($cfg, array('memory_limit', 'date.timezone'), true))
+		{
+			$ua_append .= ' ' . $cfg . '/' . str_replace('/', '.', $cfg_value);
+		}
+		elseif (in_array($cfg, array('open_basedir', 'safe_mode', 'zend.enable_gc'), true))
+		{
+			if ($cfg_value === false || $cfg_value === '' || $cfg_value === 0)
+			{
+				$cfg_value = 'off';
+			}
+			elseif ($cfg_value === true || $cfg_value === '1' || $cfg_value === 1)
+			{
+				$cfg_value = 'on';
+			}
+
+			$ua_append .= ' ' . $cfg . '/' . $cfg_value;
+		}
+	}
+
 	return $ua_append;
 }
 
@@ -102,10 +125,10 @@ function __aws_sdk_ua_callback()
 // INTERMEDIARY CONSTANTS
 
 define('CFRUNTIME_NAME', 'aws-sdk-php');
-define('CFRUNTIME_VERSION', '1.3.3');
+define('CFRUNTIME_VERSION', '1.4.3');
 // define('CFRUNTIME_BUILD', gmdate('YmdHis', filemtime(__FILE__))); // @todo: Hardcode for release.
-define('CFRUNTIME_BUILD', '20110510205648');
-define('CFRUNTIME_USERAGENT', CFRUNTIME_NAME . '/' . CFRUNTIME_VERSION . ' PHP/' . PHP_VERSION . ' ' . php_uname('s') . '/' . php_uname('r') . ' Arch/' . php_uname('m') . ' SAPI/' . php_sapi_name() . ' Integer/' . PHP_INT_MAX . ' Build/' . CFRUNTIME_BUILD . __aws_sdk_ua_callback());
+define('CFRUNTIME_BUILD', '20110930191027');
+define('CFRUNTIME_USERAGENT', CFRUNTIME_NAME . '/' . CFRUNTIME_VERSION . ' PHP/' . PHP_VERSION . ' ' . str_replace(' ', '_', php_uname('s')) . '/' . str_replace(' ', '_', php_uname('r')) . ' Arch/' . php_uname('m') . ' SAPI/' . php_sapi_name() . ' Integer/' . PHP_INT_MAX . ' Build/' . CFRUNTIME_BUILD . __aws_sdk_ua_callback());
 
 
 /*%******************************************************************************************%*/
@@ -115,7 +138,7 @@ define('CFRUNTIME_USERAGENT', CFRUNTIME_NAME . '/' . CFRUNTIME_VERSION . ' PHP/'
  * Core functionality and default settings shared across all SDK classes. All methods and properties in this
  * class are inherited by the service-specific classes.
  *
- * @version 2011.05.10
+ * @version 2011.07.28
  * @license See the included NOTICE.md file for more information.
  * @copyright See the included NOTICE.md file for more information.
  * @link http://aws.amazon.com/php/ PHP Developer Center
@@ -230,6 +253,11 @@ class CFRuntime
 	public $use_ssl = true;
 
 	/**
+	 * The state of SSL certificate verification.
+	 */
+	public $ssl_verification = true;
+
+	/**
 	 * The proxy to use for connecting.
 	 */
 	public $proxy = null;
@@ -332,13 +360,12 @@ class CFRuntime
 	 * The constructor. You would not normally instantiate this class directly. Rather, you would instantiate
 	 * a service-specific class.
 	 *
-	 * @param string $key (Optional) Your Amazon API Key. If blank, it will look for the <AWS_KEY> constant.
-	 * @param string $secret_key (Optional) Your Amazon API Secret Key. If blank, it will look for the <AWS_SECRET_KEY> constant.
-	 * @param string $account_id (Optional) Your Amazon account ID without the hyphens. Required for EC2. If blank, it will look for the <AWS_ACCOUNT_ID> constant.
-	 * @param string $assoc_id (Optional) Your Amazon Associates ID. Required for PAS. If blank, it will look for the <AWS_ASSOC_ID> constant.
+	 * @param string $key (Optional) Your AWS key, or a session key. If blank, it will look for the <code>AWS_KEY</code> constant.
+	 * @param string $secret_key (Optional) Your AWS secret key, or a session secret key. If blank, it will look for the <code>AWS_SECRET_KEY</code> constant.
+	 * @param string $token (optional) An AWS session token. If blank, a request will be made to the AWS Secure Token Service to fetch a set of session credentials.
 	 * @return boolean A value of `false` if no valid values are set, otherwise `true`.
 	 */
-	public function __construct($key = null, $secret_key = null, $account_id = null, $assoc_id = null)
+	public function __construct($key = null, $secret_key = null, $token = null)
 	{
 		// Instantiate the utilities class.
 		$this->util = new $this->utilities_class();
@@ -349,28 +376,7 @@ class CFRuntime
 		// Set default values
 		$this->key = null;
 		$this->secret_key = null;
-		$this->account_id = null;
-		$this->assoc_id = null;
-
-		// Set the Account ID
-		if ($account_id)
-		{
-			$this->account_id = $account_id;
-		}
-		elseif (defined('AWS_ACCOUNT_ID'))
-		{
-			$this->account_id = AWS_ACCOUNT_ID;
-		}
-
-		// Set the Associates ID
-		if ($assoc_id)
-		{
-			$this->assoc_id = $assoc_id;
-		}
-		elseif (defined('AWS_ASSOC_ID'))
-		{
-			$this->assoc_id = AWS_ASSOC_ID;
-		}
+		$this->auth_token = $token;
 
 		// If both a key and secret key are passed in, use those.
 		if ($key && $secret_key)
@@ -395,15 +401,117 @@ class CFRuntime
 	}
 
 	/**
-	 * Alternate approach to constructing a new instance. Supports chaining.
+	 * Handle session-based authentication for services that support it.
 	 *
-	 * @param string $key (Optional) Your Amazon API Key. If blank, it will look for the <AWS_KEY> constant.
-	 * @param string $secret_key (Optional) Your Amazon API Secret Key. If blank, it will look for the <AWS_SECRET_KEY> constant.
-	 * @param string $account_id (Optional) Your Amazon account ID without the hyphens. Required for EC2. If blank, it will look for the <AWS_ACCOUNT_ID> constant.
-	 * @param string $assoc_id (Optional) Your Amazon Associates ID. Required for AAWS. If blank, it will look for the <AWS_ASSOC_ID> constant.
+	 * @param string $key (Optional) Your AWS key, or a session key. If blank, it will look for the <code>AWS_KEY</code> constant.
+	 * @param string $secret_key (Optional) Your AWS secret key, or a session secret key. If blank, it will look for the <code>AWS_SECRET_KEY</code> constant.
+	 * @param string $token (optional) An AWS session token. If blank, a request will be made to the AWS Secure Token Service to fetch a set of session credentials.
 	 * @return boolean A value of `false` if no valid values are set, otherwise `true`.
 	 */
-	public static function init($key = null, $secret_key = null, $account_id = null, $assoc_id = null)
+	public function session_based_auth($key = null, $secret_key = null, $token = null)
+	{
+		// Instantiate the utilities class.
+		$this->util = new $this->utilities_class();
+
+		// Use 'em if we've got 'em
+		if ($key && $secret_key && $token)
+		{
+			$this->key = $key;
+			$this->secret_key = $secret_key;
+			$this->auth_token = $token;
+			return true;
+		}
+		else
+		{
+			if (!$key && !defined('AWS_KEY'))
+			{
+				// @codeCoverageIgnoreStart
+				throw new CFRuntime_Exception('No account key was passed into the constructor, nor was it set in the AWS_KEY constant.');
+				// @codeCoverageIgnoreEnd
+			}
+
+			if (!$secret_key && !defined('AWS_SECRET_KEY'))
+			{
+				// @codeCoverageIgnoreStart
+				throw new CFRuntime_Exception('No account secret was passed into the constructor, nor was it set in the AWS_SECRET_KEY constant.');
+				// @codeCoverageIgnoreEnd
+			}
+
+			// If both a key and secret key are passed in, use those.
+			if ($key && $secret_key)
+			{
+				$this->key = $key;
+				$this->secret_key = $secret_key;
+			}
+			// If neither are passed in, look for the constants instead.
+			elseif (defined('AWS_KEY') && defined('AWS_SECRET_KEY'))
+			{
+				$this->key = AWS_KEY;
+				$this->secret_key = AWS_SECRET_KEY;
+			}
+
+			// Determine storage type.
+			$this->set_cache_config(AWS_DEFAULT_CACHE_CONFIG);
+			$cache_class = $this->cache_class;
+			$cache_object = new $cache_class('aws_active_session_credentials_' . get_class($this) . '_' . $this->key, AWS_DEFAULT_CACHE_CONFIG, 3600); // AWS_DEFAULT_CACHE_CONFIG only matters if it's a file system path.
+
+			// Fetch session credentials
+			$session_credentials = $cache_object->response_manager(array($this, 'cache_token'), array($this->key, $this->secret_key));
+			$this->auth_token = $session_credentials['SessionToken'];
+
+			// If both a key and secret key are passed in, use those.
+			if (isset($session_credentials['AccessKeyId']) && isset($session_credentials['SecretAccessKey']))
+			{
+				$this->key = $session_credentials['AccessKeyId'];
+				$this->secret_key = $session_credentials['SecretAccessKey'];
+				return true;
+			}
+			// Otherwise set the values to blank and return false.
+			else
+			{
+				throw new CFRuntime_Exception('No valid credentials were used to authenticate with AWS.');
+			}
+		}
+	}
+
+	/**
+	 * The callback function that is executed  while caching the session credentials.
+	 *
+	 * @param string $key (Optional) Your AWS key, or a session key. If blank, it will look for the <code>AWS_KEY</code> constant.
+	 * @param string $secret_key (Optional) Your AWS secret key, or a session secret key. If blank, it will look for the <code>AWS_SECRET_KEY</code> constant.
+	 * @return mixed The data to be cached or null.
+	 */
+	public function cache_token($key, $secret_key)
+	{
+		$token = new AmazonSTS($key, $secret_key);
+		$response = $token->get_session_token();
+
+		if ($response->isOK())
+		{
+			/*
+			Array
+			(
+			    [AccessKeyId] => ******
+			    [Expiration] => ******
+			    [SecretAccessKey] => ******
+				[SessionToken] => ******
+			)
+			*/
+			return $response->body->GetSessionTokenResult->Credentials->to_array()->getArrayCopy();
+		}
+
+		return null;
+	}
+
+	/**
+	 * Alternate approach to constructing a new instance. Supports chaining.
+	 *
+	 * @param string $key (Optional) Your AWS key, or a session key. If blank, it will look for the <code>AWS_KEY</code> constant.
+	 * @param string $secret_key (Optional) Your AWS secret key, or a session secret key. If blank, it will look for the <code>AWS_SECRET_KEY</code> constant.
+	 * @param string $token (optional) An AWS session token. If blank, a request will be made to the AWS Secure Token Service to fetch a set of session credentials.
+	 * @return boolean A value of `false` if no valid values are set, otherwise `true`.
+	 */
+	public static function init($key = null, $secret_key = null, $token = null)
 	{
 		if (version_compare(PHP_VERSION, '5.3.0', '<'))
 		{
@@ -411,7 +519,7 @@ class CFRuntime
 		}
 
 		$self = get_called_class();
-		return new $self($key, $secret_key, $account_id, $assoc_id);
+		return new $self($key, $secret_key, $token);
 	}
 
 
@@ -520,11 +628,33 @@ class CFRuntime
 	 * Disables SSL/HTTPS connections for hosts that don't support them. Some services, however, still
 	 * require SSL support.
 	 *
+	 * This method will throw a user warning when invoked, which can be hidden by changing your
+	 * <php:error_reporting()> settings.
+	 *
 	 * @return $this A reference to the current instance.
 	 */
 	public function disable_ssl()
 	{
+		trigger_error('Disabling SSL connections is potentially unsafe and highly discouraged.', E_USER_WARNING);
 		$this->use_ssl = false;
+		return $this;
+	}
+
+	/**
+	 * Disables the verification of the SSL Certificate Authority. Doing so can enable an attacker to carry
+	 * out a man-in-the-middle attack.
+	 *
+	 * https://secure.wikimedia.org/wikipedia/en/wiki/Man-in-the-middle_attack
+	 *
+	 * This method will throw a user warning when invoked, which can be hidden by changing your
+	 * <php:error_reporting()> settings.
+	 *
+	 * @return $this A reference to the current instance.
+	 */
+	public function disable_ssl_verification($ssl_verification = false)
+	{
+		trigger_error('Disabling the verification of SSL certificates can lead to man-in-the-middle attacks. It is potentially unsafe and highly discouraged.', E_USER_WARNING);
+		$this->ssl_verification = $ssl_verification;
 		return $this;
 	}
 
@@ -793,6 +923,13 @@ class CFRuntime
 		$timestamp = gmdate(CFUtilities::DATE_FORMAT_ISO8601, $current_time);
 		$nonce = $this->util->generate_guid();
 
+		// Do we have an authentication token?
+		if ($this->auth_token)
+		{
+			$headers['X-Amz-Security-Token'] = $this->auth_token;
+			$query['SecurityToken'] = $this->auth_token;
+		}
+
 		// Manage the key-value pairs that are used in the query.
 		if (stripos($action, 'x-amz-target') !== false)
 		{
@@ -802,7 +939,12 @@ class CFRuntime
 		{
 			$query['Action'] = $action;
 		}
-		$query['Version'] = $this->api_version;
+
+		// Only add it if it exists.
+		if ($this->api_version)
+		{
+			$query['Version'] = $this->api_version;
+		}
 
 		// Only Signature v2
 		if ($signature_version === 2)
@@ -811,6 +953,15 @@ class CFRuntime
 			$query['SignatureMethod'] = 'HmacSHA256';
 			$query['SignatureVersion'] = 2;
 			$query['Timestamp'] = $timestamp;
+		}
+
+		$curlopts = array();
+
+		// Set custom CURLOPT settings
+		if (is_array($opt) && isset($opt['curlopts']))
+		{
+			$curlopts = $opt['curlopts'];
+			unset($opt['curlopts']);
 		}
 
 		// Merge in any options that were passed in
@@ -889,12 +1040,6 @@ class CFRuntime
 		$request->set_method('POST');
 		$request->set_body($querystring);
 		$headers['Content-Type'] = 'application/x-www-form-urlencoded; charset=utf-8';
-
-		// Do we have an authentication token?
-		if ($this->auth_token)
-		{
-			$headers['X-Amz-Security-Token'] = $this->auth_token;
-		}
 
 		// Signing using X-Amz-Target is handled differently.
 		if ($signature_version === 3 && $x_amz_target)
@@ -1007,15 +1152,7 @@ class CFRuntime
 		// Update RequestCore settings
 		$request->request_class = $this->request_class;
 		$request->response_class = $this->response_class;
-
-		$curlopts = array();
-
-		// Set custom CURLOPT settings
-		if (is_array($opt) && isset($opt['curlopts']))
-		{
-			$curlopts = $opt['curlopts'];
-			unset($opt['curlopts']);
-		}
+		$request->ssl_verification = $this->ssl_verification;
 
 		// Debug mode
 		if ($this->debug_mode)
@@ -1229,7 +1366,7 @@ class CFRuntime
 				case 'deflate':
 					if (strpos($headers['_info']['url'], 'monitoring.') !== false)
 					{
-						// CloudWatch incorrectly does nothing when they say deflate.
+						// CloudWatchWatch incorrectly does nothing when they say deflate.
 						continue;
 					}
 					else
