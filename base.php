@@ -109,13 +109,13 @@ function randomPassword($random_string_length) {
 }
 
 
-function getUserdata($password) {
+function getUserdata($password = '') {
     $userdata = <<<EOD
 #!/bin/bash -ex
 exec > >(tee /var/log/user-data.log|logger -t user-data -s 2>/dev/console) 2>&1
 
-wget https://github.com/downloads/ginatrapani/ThinkUp/thinkup_0.16.zip --no-check-certificate
-sudo unzip -d /var/www/ thinkup_0.16.zip
+wget https://github.com/downloads/ginatrapani/ThinkUp/thinkup_0.17.zip --no-check-certificate
+sudo unzip -d /var/www/ thinkup_0.17.zip
 
 # config thinkup installer
 sudo ln -s /usr/sbin/sendmail /usr/bin/sendmail
@@ -127,12 +127,18 @@ sudo chown www-data /var/www/thinkup/config.inc.php
 mysqladmin -u root password $password 
 mysqladmin -h localhost -u root -p$password create thinkup
 
+mysql -h localhost -u root -p$password <<EOF
+CREATE USER 'thinkup'@'localhost' IDENTIFIED BY '$password';
+GRANT ALL PRIVILEGES ON thinkup.* TO thinkup@'localhost';
+EOF
+
 # add apparmor exception for ThinkUp backup
 sudo sed -i '
 /\/var\/run\/mysqld\/mysqld.sock w,/ a\
   /var/www/thinkup/_lib/view/compiled_view/** rw,
 ' /etc/apparmor.d/usr.sbin.mysqld
 sudo /etc/init.d/apparmor restart
+
 EOD;
     return $userdata;
     

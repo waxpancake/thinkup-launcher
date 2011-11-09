@@ -96,7 +96,7 @@ if (isset($_POST['aws_id']) && isset($_POST['aws_key'])) {
                 <blockquote>
                     Database Host: localhost<br />
                     Database Name: thinkup<br />
-                    User Name: root<br />
+                    User Name: thinkup<br />
                     Password: <?= $password ?>
                 </blockquote>
                 </p>
