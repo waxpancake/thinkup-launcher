@@ -109,13 +109,28 @@ function randomPassword($random_string_length) {
 }
 
 
+function getVersion() {
+	$versioncheck_url = 'http://thinkupapp.com/version_download.php';
+	$json = file_get_contents($versioncheck_url);
+	$obj = json_decode($json);
+	
+	$url = $obj->{'url'};
+	$version = $obj->{'version'};
+	return array($url, $version);
+	
+}
+
+
 function getUserdata($password = '') {
+	list($url, $version) = getVersion();
+	$filename = 'thinkup_' . $version . '.zip';
+	
     $userdata = <<<EOD
 #!/bin/bash -ex
 exec > >(tee /var/log/user-data.log|logger -t user-data -s 2>/dev/console) 2>&1
 
-wget https://github.com/downloads/ginatrapani/ThinkUp/thinkup_1.0.zip --no-check-certificate
-sudo unzip -d /var/www/ thinkup_1.0.zip
+wget $url --no-check-certificate
+sudo unzip -d /var/www/ $filename
 
 # config thinkup installer
 sudo ln -s /usr/sbin/sendmail /usr/bin/sendmail
