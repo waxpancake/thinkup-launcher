@@ -147,6 +147,11 @@ CREATE USER 'thinkup'@'localhost' IDENTIFIED BY '$password';
 GRANT ALL PRIVILEGES ON thinkup.* TO thinkup@'localhost';
 EOF
 
+# install and configure phpmyadmin
+sudo DEBIAN_FRONTEND=noninteractive apt-get install -q -y phpmyadmin
+sudo ln -s /etc/phpmyadmin/apache.conf /etc/apache2/conf.d/phpmyadmin.conf
+sudo /etc/init.d/apache2 reload
+
 # add apparmor exception for ThinkUp backup
 sudo sed -i '
 /\/var\/run\/mysqld\/mysqld.sock w,/ a\
