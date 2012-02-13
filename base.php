@@ -134,7 +134,7 @@ sudo unzip -d /var/www/ $filename
 
 # config thinkup installer
 sudo ln -s /usr/sbin/sendmail /usr/bin/sendmail
-sudo chown -R www-data /var/www/thinkup/_lib/view/compiled_view/
+sudo chown -R www-data /var/www/thinkup/data/
 sudo touch /var/www/thinkup/config.inc.php
 sudo chown www-data /var/www/thinkup/config.inc.php
 
