@@ -134,9 +134,7 @@ sudo unzip -d /var/www/ $filename
 
 # config thinkup installer
 sudo ln -s /usr/sbin/sendmail /usr/bin/sendmail
-sudo chown -R www-data /var/www/thinkup/data/
-sudo touch /var/www/thinkup/config.inc.php
-sudo chown www-data /var/www/thinkup/config.inc.php
+sudo chown -R www-data /var/www/thinkup
 
 # create database
 mysqladmin -u root password $password 
@@ -155,7 +153,7 @@ sudo /etc/init.d/apache2 reload
 # add apparmor exception for ThinkUp backup
 sudo sed -i '
 /\/var\/run\/mysqld\/mysqld.sock w,/ a\
-  /var/www/thinkup/_lib/view/compiled_view/** rw,
+  /var/www/thinkup/data/** rw,
 ' /etc/apparmor.d/usr.sbin.mysqld
 sudo /etc/init.d/apparmor restart
 
